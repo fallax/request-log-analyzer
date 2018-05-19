@@ -82,7 +82,7 @@ module RequestLogAnalyzer::Tracker
         @hour_frequencies.each_with_index do |requests, index|
           ratio            = requests.to_f / total_requests.to_f
           requests_per_day = (requests / days).ceil
-          rows << ["#{index.to_s.rjust(3)}:00", '%d hits/day' % requests_per_day, ratio]
+          rows << ["#{index.to_s.rjust(3)}:00", "#{requests} requests total", "#{days.to_f.round(2)} days", '%d hits/day' % requests_per_day, ratio]
         end
       end
     end

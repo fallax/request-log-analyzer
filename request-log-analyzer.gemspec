@@ -31,6 +31,7 @@ Gem::Specification.new do |gem|
   gem.requirements << "To use the database inserter, ActiveRecord and an appropriate database adapter are required."
   gem.required_ruby_version = '>= 1.9.3'
 
+  gem.add_dependency('user_agent_parser')
   gem.add_development_dependency('rake')
   gem.add_development_dependency('rspec', '~> 3')
   gem.add_development_dependency('activerecord')

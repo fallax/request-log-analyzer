@@ -1,4 +1,9 @@
+require 'user_agent_parser'
+
 module RequestLogAnalyzer::FileFormat
+
+  USER_AGENT_PARSER = UserAgentParser::Parser.new
+
   # FileFormat for Amazon S3 access logs.
   #
   # Access logs are disabled by default on Amazon S3. To enable logging, see
@@ -33,8 +38,23 @@ module RequestLogAnalyzer::FileFormat
     report do |analyze|
       analyze.timespan
       analyze.hourly_spread
+      analyze.hourly_spread if: lambda { |r| r[:key] == "assets/css/css.css" }, title: 'CSS hits (roughly equals number of new visitors)'
+      analyze.hourly_spread if: lambda { |r| DateTime.parse(r[:timestamp].to_s, '%Y%m%d%H%M%S').to_time > Time.now - (24 * 60 * 60) }, title: 'Last 24 hours'
+      analyze.hourly_spread if: lambda { |r| (r[:key] =~ /.*html$/) and (DateTime.parse(r[:timestamp].to_s, '%Y%m%d%H%M%S').to_time > Time.now - (24 * 60 * 60)) }, title: 'Pages: Last 24 hours'
+      analyze.hourly_spread if: lambda { |r| (r[:key] == "assets/css/css.css") and (DateTime.parse(r[:timestamp].to_s, '%Y%m%d%H%M%S').to_time > Time.now - (24 * 60 * 60)) }, title: 'CSS visits: Last 24 hours'
 
-      analyze.frequency category: lambda { |r| "#{r[:bucket]}/#{r[:key]}" }, title: 'Most popular items'
+      analyze.uniques if: lambda { |r| r[:key] == "assets/css/css.css" },  field: :remote_ip, title: 'CSS hits (roughly equals number of new visitors)'
+      analyze.uniques if: lambda { |r| r[:key] =~ /.*html$/ }, field: :remote_ip
+      analyze.uniques if: lambda { |r| r[:key] =~ /article\// }, field: :remote_ip, title: 'Unique articles'
+
+      analyze.frequency if: lambda { |r| r[:key] =~ /.*html$/ and r[:referer] =~ /.*\.google.*/ }, category: lambda { |r| "#{r[:bucket]}/#{r[:key]}" }, title: 'Pages with most google referrals'
+      analyze.frequency if: lambda { |r| r[:key] =~ /.*html$/ }, category: lambda { |r| "#{r[:bucket]}/#{r[:key]}" }, title: 'Most visited pages'
+      analyze.frequency if: lambda { |r| r[:key] =~ /article\// }, category: lambda { |r| "#{r[:bucket]}/#{r[:key]}" }, title: 'Most visited articles'
+      analyze.frequency if: lambda { |r| r[:key] =~ /category\// }, category: lambda { |r| "#{r[:bucket]}/#{r[:key]}" }, title: 'Most visited categories'
+      analyze.frequency if: lambda { |r| r[:key] =~ /identity\// }, category: lambda { |r| "#{r[:bucket]}/#{r[:key]}" }, title: 'Most visited identities'
+      analyze.frequency category: lambda { |r| "#{r[:bucket]}/#{r[:key]}" }, title: 'Most popular files'
+      analyze.frequency if: lambda { |r| r[:referer] !~ /http:\/\/genderkit.org.uk.*/ }, category: lambda { |r| "#{r[:referer].to_s.gsub(/\?.*/,"")}" }, title: 'Most popular referers'
+      analyze.frequency category: lambda { |r| USER_AGENT_PARSER.parse("#{r[:user_agent]}").to_s }, title: 'Most popular user agents'
       analyze.duration duration: :total_time, category: lambda { |r| "#{r[:bucket]}/#{r[:key]}" }, title: 'Request duration'
       analyze.traffic traffic: :bytes_sent,  category: lambda { |r| "#{r[:bucket]}/#{r[:key]}" }, title: 'Traffic'
       analyze.frequency category: :http_status, title: 'HTTP status codes'

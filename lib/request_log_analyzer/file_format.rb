@@ -17,6 +17,7 @@ module RequestLogAnalyzer::FileFormat
   autoload :DelayedJob4,      'request_log_analyzer/file_format/delayed_job4'
   autoload :Apache,           'request_log_analyzer/file_format/apache'
   autoload :AmazonS3,         'request_log_analyzer/file_format/amazon_s3'
+  autoload :AmazonCloudfront, 'request_log_analyzer/file_format/amazon_cloudfront'
   autoload :W3c,              'request_log_analyzer/file_format/w3c'
   autoload :Haproxy,          'request_log_analyzer/file_format/haproxy'
 
@@ -30,14 +31,17 @@ module RequestLogAnalyzer::FileFormat
     klass = nil
     if file_format.is_a?(RequestLogAnalyzer::FileFormat::Base)
       # this already is a file format! return itself
+      puts "In 1"
       return @current_file_format = file_format
 
     elsif file_format.is_a?(Class) && file_format.ancestors.include?(RequestLogAnalyzer::FileFormat::Base)
       # a usable class is provided. Use this format class.
+      puts "In 2"
       klass = file_format
 
     elsif file_format.is_a?(String) && File.exist?(file_format) && File.file?(file_format)
       # load a format from a ruby file
+      puts "In 3"
       require File.expand_path(file_format)
 
       const = RequestLogAnalyzer.to_camelcase(File.basename(file_format, '.rb'))
@@ -51,6 +55,11 @@ module RequestLogAnalyzer::FileFormat
 
     else
       # load a provided file format
+      puts "In 4"
+      puts "Formats:"
+      Dir[File.expand_path('file_format/*.rb', File.dirname(__FILE__))].map do |file|
+        puts file
+      end
       klass = RequestLogAnalyzer::FileFormat.const_get(RequestLogAnalyzer.to_camelcase(file_format))
     end
 
